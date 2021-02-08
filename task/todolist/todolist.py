@@ -2,7 +2,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Date
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import sessionmaker
 
 engine = create_engine('sqlite:///todo.db?check_same_thread=False')
@@ -25,38 +25,85 @@ Session = sessionmaker(bind=engine)
 session = Session()
 
 
-def print_tasks():
-    rows = session.query(Table).all()
+def print_today_tasks():
+    today = datetime.today()
+    rows = session.query(Table).filter(Table.deadline == today.date()).all()
+    print("Today", str(today.day), today.strftime('%b') + ":")
     if rows:
         for row in rows:
-            print(row.id)  # Will print the id of the row.
+            print(str(row.id) + ". ", end="")  # Will print the id of the row.
             print(row.task)  # Will print value of the task field
-            print(row.deadline)  # Will print value of the deadline field
-            print(row)  # Will print the string that was returned by __repr__ method
+            # print(row.deadline.day, row.deadline.strftime('%b'))  # Will print value of the deadline field
+            # print(row)  # Will print the string that was returned by __repr__ method
     else:
         print("Nothing to do!")
+        print()
 
-def add_tasks(texto):
+
+def print_week_tasks():
+    num_dia = 0
+    today = datetime.today()
+    while num_dia < 7:
+        rows = session.query(Table).filter(Table.deadline == today.date()).all()
+        print(today.strftime('%A'), str(today.day), today.strftime('%b') + ":")
+        if rows:
+            for row in rows:
+                print(str(row.id) + '. ', end="")  # Will print the id of the row.
+                print(row.task)  # Will print value of the task field
+                # print(row.deadline.day, row.deadline.strftime('%b'))  # Will print value of the deadline field
+                # print(row)  # Will print the string that was returned by __repr__ method
+        else:
+            print("Nothing to do!")
+        print()
+        num_dia += 1
+        today = today + timedelta(days=1)
+
+
+def print_tasks():
+    rows = session.query(Table).order_by(Table.deadline).all()
+    if rows:
+        number = 1
+        for row in rows:
+            print(str(number) + '. ', end="")  # Will print the id of the row.
+            print(row.task + '. ', end="")  # Will print value of the task field
+            print(row.deadline.day, row.deadline.strftime('%b'))  # Will print value of the deadline field
+            number = number + 1
+            #print(row)  # Will print the string that was returned by __repr__ method
+    else:
+        print("Nothing to do!")
+        print()
+
+
+def add_tasks(texto, dead):
+    fecha_dead = datetime.strptime(dead, '%Y-%m-%d')
     new_row = Table(task=texto,
-                    deadline=datetime.today())
+                    deadline=fecha_dead)
     session.add(new_row)
     session.commit()
     print("The task has been added!")
 
 def menu():
     print("""1) Today's tasks
-2) Add task
+2) Week's tasks
+3) All tasks
+4) Add task
 0) Exit""")
 
 while True:
     menu()
     option = int(input())
     if option == 1:
-        print_tasks()
+        print_today_tasks()
     elif option == 2:
+        print_week_tasks()
+    elif option == 3:
+        print_tasks()
+    elif option == 4:
         print("Enter task")
         task_text = input()
-        add_tasks(task_text)
+        print("Enter deadline")
+        task_deadline = input()
+        add_tasks(task_text, task_deadline)
     elif option == 0:
         print("Bye!")
         break
